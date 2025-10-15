@@ -41,21 +41,19 @@ public class AndersonSilva extends AdvancedRobot {
 		// Identifica a posição na arena
 		double eixoX = getX(); // Retorna a coordenada X atual 
 		double eixoY = getY(); // Retorna a coordenada Y atual 
+	
+		double passo = 1.0;       // quanto andamos a cada iteração
+        double incremento = 0.08; // quanto aumenta o passo (raio) por iteração
+        double angTurn = 3.0;     // quanto gira a cada iteração (graus) — mantenha pequeno
 
-
-		
-		while (true) {
-			// Tell the game that when we take move,
-			// we'll also want to turn right... a lot.
-			setMaxVelocity(5);		
-			
-			
-			
-			
-			turnLeft(100);			
-			setAhead(1000);
-			execute();
-			turnRight(50);
+        setAdjustGunForRobotTurn(true); // opcional: separa giro do canhão
+        while (true) {
+            setTurnRight(angTurn);
+            setAhead(passo);
+            execute();            // aplica as ações sem bloquear
+            passo = passo + incremento;  // aumenta o raio lentamente
+            // opcional: limitar passo para não ficar enorme
+            if (passo > 200) passo = 200;;
 			
 			
 					
@@ -94,9 +92,7 @@ public class AndersonSilva extends AdvancedRobot {
 	public void onWin(WinEvent e) {
 		turnRight(36000);
 	}
-	public void onHitWall(HitWallEvent e) {
-			turnLeft(120);
-	}	
+
 
 	public void onHitRobot(HitRobotEvent e) {
 		if (e.getBearing() > -10 && e.getBearing() < 10) {
