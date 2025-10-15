@@ -2,16 +2,16 @@ package fortlev;
 import robocode.*;
 import robocode.AdvancedRobot;
 import robocode.HitRobotEvent;
+import robocode.HitWallEvent;
 import robocode.ScannedRobotEvent;
 import robocode.Robot;
+import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.*;
 //import java.awt.Color;
 
-// API help : https://robocode.sourceforge.io/docs/robocode/robocode/Robot.html
-
 /**
- * AndersonSilva - a robot by (Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
+ * AndersonSilva - a robot by (Arthur Abdala, Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
  */
 
 public class AndersonSilva extends AdvancedRobot {
@@ -20,6 +20,11 @@ public class AndersonSilva extends AdvancedRobot {
 	 * run: AndersonSilva's default behavior
 	 */
 	boolean peek;
+	int count = 0; // Keeps track of how long we've
+	// been searching for our target
+	double gunTurnAmt; // How much to turn our gun when searching
+	String trackName; // Name of the robot we're currently tracking
+
 
 
 	public void run() {
@@ -38,14 +43,23 @@ public class AndersonSilva extends AdvancedRobot {
 		double eixoY = getY(); // Retorna a coordenada Y atual 
 
 
+		
 		while (true) {
 			// Tell the game that when we take move,
 			// we'll also want to turn right... a lot.
-			setTurnRight(largura);
-			// Limit our speed to 5
-			setMaxVelocity(5);
-			// Start moving (and turning)
+			setMaxVelocity(5);		
+			
+			
+			
+			
+			turnLeft(100);			
 			setAhead(1000);
+			execute();
+			turnRight(50);
+			
+			
+					
+		
 			// Repeat.
 			
 		}
@@ -80,6 +94,10 @@ public class AndersonSilva extends AdvancedRobot {
 	public void onWin(WinEvent e) {
 		turnRight(36000);
 	}
+	public void onHitWall(HitWallEvent e) {
+			turnLeft(120);
+	}	
+
 	public void onHitRobot(HitRobotEvent e) {
 		if (e.getBearing() > -10 && e.getBearing() < 10) {
 			fire(3);
