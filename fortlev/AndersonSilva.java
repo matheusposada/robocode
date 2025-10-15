@@ -13,6 +13,7 @@ import java.awt.*;
 /**
  * AndersonSilva - a robot by (Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
  */
+
 public class AndersonSilva extends AdvancedRobot {
 
 	/**
@@ -21,36 +22,32 @@ public class AndersonSilva extends AdvancedRobot {
 	boolean peek;
 
 
-/**
- * SpinBot - a sample robot by Mathew Nelson.
- * <p>
- * Moves in a circle, firing hard when an enemy is detected.
- *
- * @author Mathew A. Nelson (original)
- * @author Flemming N. Larsen (contributor)
- */
-
-
-	/**
-	 * SpinBot's run method - Circle
-	 */
 	public void run() {
 		// Set colors
 		setBodyColor(Color.blue);
 		setGunColor(Color.blue);
 		setRadarColor(Color.black);
 		setScanColor(Color.yellow);
+		
+		// Identifica o tamanho da areana
+		double largura = getBattleFieldWidth();  // Retorna a largura da arena 
+		double altura = getBattleFieldHeight(); // Retorna a altura da arena 
+		
+		// Identifica a posição na arena
+		double eixoX = getX(); // Retorna a coordenada X atual 
+		double eixoY = getY(); // Retorna a coordenada Y atual 
 
-		// Loop forever
+
 		while (true) {
 			// Tell the game that when we take move,
 			// we'll also want to turn right... a lot.
-			setTurnRight(10000);
+			setTurnRight(largura);
 			// Limit our speed to 5
 			setMaxVelocity(5);
 			// Start moving (and turning)
-			ahead(10000);
+			setAhead(1000);
 			// Repeat.
+			
 		}
 	}
 
@@ -71,6 +68,17 @@ public class AndersonSilva extends AdvancedRobot {
 		if (peek) {
 			scan();
 		}
+		
+	}
+	public void onHitWall(HitWallEvent e) {
+    double bearing = e.getBearing();
+    out.println("Bati na parede com ângulo: " + bearing);
+    turnRight(-bearing); // Gira para o lado oposto da colisão
+    ahead(100);          // Anda para frente após o giro
+	}
+
+	public void onWin(WinEvent e) {
+		turnRight(36000);
 	}
 	public void onHitRobot(HitRobotEvent e) {
 		if (e.getBearing() > -10 && e.getBearing() < 10) {
