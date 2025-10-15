@@ -2,16 +2,16 @@ package fortlev;
 import robocode.*;
 import robocode.AdvancedRobot;
 import robocode.HitRobotEvent;
+import robocode.HitWallEvent;
 import robocode.ScannedRobotEvent;
 import robocode.Robot;
+import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.*;
 //import java.awt.Color;
 
-// API help : https://robocode.sourceforge.io/docs/robocode/robocode/Robot.html
-
 /**
- * AndersonSilva - a robot by (Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
+ * AndersonSilva - a robot by (Arthur Abdala, Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
  */
 public class AndersonSilva extends AdvancedRobot {
 
@@ -19,21 +19,13 @@ public class AndersonSilva extends AdvancedRobot {
 	 * run: AndersonSilva's default behavior
 	 */
 	boolean peek;
+	int count = 0; // Keeps track of how long we've
+	// been searching for our target
+	double gunTurnAmt; // How much to turn our gun when searching
+	String trackName; // Name of the robot we're currently tracking
 
 
-/**
- * SpinBot - a sample robot by Mathew Nelson.
- * <p>
- * Moves in a circle, firing hard when an enemy is detected.
- *
- * @author Mathew A. Nelson (original)
- * @author Flemming N. Larsen (contributor)
- */
 
-
-	/**
-	 * SpinBot's run method - Circle
-	 */
 	public void run() {
 		// Set colors
 		setBodyColor(Color.blue);
@@ -41,15 +33,26 @@ public class AndersonSilva extends AdvancedRobot {
 		setRadarColor(Color.black);
 		setScanColor(Color.yellow);
 
+		trackName = null; // Initialize to not tracking anyone
+		setAdjustGunForRobotTurn(true); // Keep the gun still when we turn
+		gunTurnAmt = 10; // Initialize gunTurn to 10
 		// Loop forever
 		while (true) {
 			// Tell the game that when we take move,
 			// we'll also want to turn right... a lot.
-			setTurnRight(10000);
-			// Limit our speed to 5
-			setMaxVelocity(5);
-			// Start moving (and turning)
-			ahead(10000);
+			setMaxVelocity(5);		
+			
+			
+			
+			
+			turnLeft(100);			
+			setAhead(1000);
+			execute();
+			turnRight(50);
+			
+			
+					
+		
 			// Repeat.
 		}
 	}
@@ -72,6 +75,10 @@ public class AndersonSilva extends AdvancedRobot {
 			scan();
 		}
 	}
+	public void onHitWall(HitWallEvent e) {
+			turnLeft(120);
+	}	
+
 	public void onHitRobot(HitRobotEvent e) {
 		if (e.getBearing() > -10 && e.getBearing() < 10) {
 			fire(3);
