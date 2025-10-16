@@ -27,12 +27,11 @@ public class AndersonSilva extends AdvancedRobot {
 
 
 
-	public void run() {
-		// Set colors
-		setBodyColor(Color.blue);
-		setGunColor(Color.blue);
+	public void run() {		
+		setBodyColor(Color.black);
+		setGunColor(Color.white);
 		setRadarColor(Color.black);
-		setScanColor(Color.yellow);
+		setScanColor(Color.red);
 		
 		// Identifica o tamanho da areana
 		double largura = getBattleFieldWidth();  // Retorna a largura da arena 
@@ -44,34 +43,41 @@ public class AndersonSilva extends AdvancedRobot {
 	
 		double passo = 1.0;       // quanto andamos a cada iteração
         double incremento = 0.08; // quanto aumenta o passo (raio) por iteração
-        double angTurn = 3.0;     // quanto gira a cada iteração (graus) — mantenha pequeno
+        double angTurn = 3.0;     // quanto gira a cada iteração (graus) 
+		boolean expandindo = true; // controla se o raio está abrindo ou fechando		
 
-        setAdjustGunForRobotTurn(true); // opcional: separa giro do canhão
+        setAdjustGunForRobotTurn(true); // separa giro do canhão
+		setAdjustRadarForGunTurn(true);		
+
         while (true) {
+			// movimento contínuo
             setTurnRight(angTurn);
             setAhead(passo);
-            execute();            // aplica as ações sem bloquear
-            passo = passo + incremento;  // aumenta o raio lentamente
-            // opcional: limitar passo para não ficar enorme
-            if (passo > 200) passo = 200;;
+            execute();    
 			
-			
-					
+			// Alterna entre abrir e fechar o espiral
+			if (expandindo){       
+            	passo = passo + incremento;  // aumenta o raio lentamente           
+            	if (passo > 150) expandindo = false; // ponto máximo do raio
+			} else {
+				passo = passo - incremento; // diminui o raio lentamente
+				if (passo < 10) {
+					expandindo = true; // começa a abrir de novo
+					// move o centro do espiral: se movimenta pelo mapa
+					turnRight(45);
+					ahead(100);
+				}
 		
-			// Repeat.
-			
 		}
+		
+		// evitar encostar nas paredes
+		if (getX() < 100 || getX() > getBattleFieldWidth() - 100 || getY() < 100 || getY() > getBattleFieldHeight() - 100) {
+                turnRight(90);
+				ahead(150);
+		}}
 	}
 
-	/**
-	 * onScannedRobot: Fire hard!
-	 */
-	
-	/**
-	 * onHitRobot:  If it's our fault, we'll stop turning and moving,
-	 * so we need to turn again to keep spinning.
-	 */
-	
+
 	public void onScannedRobot(ScannedRobotEvent e) {
 		fire(4);
 		// Note that scan is called automatically when the robot is moving.
