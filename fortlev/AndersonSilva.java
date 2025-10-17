@@ -1,111 +1,130 @@
 package fortlev;
-import robocode.*;
-import robocode.AdvancedRobot;
-import robocode.HitRobotEvent;
-import robocode.HitWallEvent;
-import robocode.ScannedRobotEvent;
-import robocode.Robot;
-import static robocode.util.Utils.normalRelativeAngleDegrees;
 
+import robocode.*;
+import static robocode.util.Utils.normalRelativeAngleDegrees;
 import java.awt.*;
-//import java.awt.Color;
 
 /**
  * AndersonSilva - a robot by (Arthur Abdala, Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
  */
-
 public class AndersonSilva extends AdvancedRobot {
 
-	/**
-	 * run: AndersonSilva's default behavior
-	 */
-	boolean peek;
-	int count = 0; // Keeps track of how long we've
-	// been searching for our target
-	double gunTurnAmt; // How much to turn our gun when searching
-	String trackName; // Name of the robot we're currently tracking
+    // ===== VARIÁVEIS DE CONTROLE =====
+    double velocidadeRadar = 30; // velocidade de rotação do radar (em graus por tick)
+    boolean girandoDireita = true; // controla o sentido de rotação do radar
+    double passo = 1.0;            // distância que o robô anda a cada iteração (controla o raio da espiral)
+    double incremento = 0.08;      // quanto o "passo" aumenta ou diminui (abre/fecha a espiral)
+    double angTurn = 3.0;          // ângulo que o corpo gira por ciclo
+    boolean expandindo = true;     // indica se a espiral está abrindo (true) ou fechando (false)
 
+    // ===== MÉTODO PRINCIPAL =====
+    public void run() {
+        // === CONFIGURAÇÃO DE CORES ===
+        setBodyColor(Color.black);
+        setGunColor(Color.white);
+        setRadarColor(Color.white);
+        setScanColor(Color.red);
 
+        // Permite que radar e canhão girem de forma independente do corpo
+        setAdjustGunForRobotTurn(true);
+        setAdjustRadarForGunTurn(true);
 
-	public void run() {		
-		setBodyColor(Color.black);
-		setGunColor(Color.white);
-		setRadarColor(Color.black);
-		setScanColor(Color.red);
-		
-		// Identifica o tamanho da areana
-		double largura = getBattleFieldWidth();  // Retorna a largura da arena 
-		double altura = getBattleFieldHeight(); // Retorna a altura da arena 
-		
-		// Identifica a posição na arena
-		double eixoX = getX(); // Retorna a coordenada X atual 
-		double eixoY = getY(); // Retorna a coordenada Y atual 
-	
-		double passo = 1.0;       // quanto andamos a cada iteração
-        double incremento = 0.08; // quanto aumenta o passo (raio) por iteração
-        double angTurn = 3.0;     // quanto gira a cada iteração (graus) 
-		boolean expandindo = true; // controla se o raio está abrindo ou fechando		
-
-        setAdjustGunForRobotTurn(true); // separa giro do canhão
-		setAdjustRadarForGunTurn(true);		
-
+        // === LOOP PRINCIPAL (executa até o fim da partida) ===
         while (true) {
-			// movimento contínuo
-            setTurnRight(angTurn);
-            setAhead(passo);
-            execute();    
-			
-			// Alterna entre abrir e fechar o espiral
-			if (expandindo){       
-            	passo = passo + incremento;  // aumenta o raio lentamente           
-            	if (passo > 150) expandindo = false; // ponto máximo do raio
-			} else {
-				passo = passo - incremento; // diminui o raio lentamente
-				if (passo < 10) {
-					expandindo = true; // começa a abrir de novo
-					// move o centro do espiral: se movimenta pelo mapa
-					turnRight(45);
-					ahead(100);
-				}
-		
-		}
-		
-		// evitar encostar nas paredes
-		if (getX() < 100 || getX() > getBattleFieldWidth() - 100 || getY() < 100 || getY() > getBattleFieldHeight() - 100) {
-                turnRight(90);
-				ahead(150);
-		}}
-	}
+            // === MOVIMENTO EM ESPIRAL CONTÍNUO ===
+            setTurnRight(angTurn);  // gira levemente o corpo
+            setAhead(passo);        // anda para frente (passo define o raio da espiral)
 
+            // Alterna entre expandir e contrair a espiral
+            if (expandindo) {
+                passo = passo + incremento;            // aumenta o raio
+                if (passo > 150) expandindo = false; // muda para fase de contração
+            } else {
+                passo = passo - incremento;            // diminui o raio
+                if (passo < 10) {
+                    expandindo = true;          // volta a expandir
+                    setTurnRight(45);           // muda o centro da espiral
+                    setAhead(100);              // avança um pouco para deslocar o padrão no mapa
+                }
+            }
 
-	public void onScannedRobot(ScannedRobotEvent e) {
-		fire(4);
-		// Note that scan is called automatically when the robot is moving.
-		// By calling it manually here, we make sure we generate another scan event if there's a robot on the next
-		// wall, so that we do not start moving up it until it's gone.
-		if (peek) {
-			scan();
-		}
-		
-	}
-	public void onHitWall(HitWallEvent e) {
-    double bearing = e.getBearing();
-    out.println("Bati na parede com ângulo: " + bearing);
-    turnRight(-bearing); // Gira para o lado oposto da colisão
-    ahead(100);          // Anda para frente após o giro
-	}
+            // === EVITAR PAREDES ===
+            // Se o robô estiver próximo das bordas do campo de batalha, muda de direção
+            if (getX() < 100 || getX() > getBattleFieldWidth() - 100 ||
+                getY() < 100 || getY() > getBattleFieldHeight() - 100) {
+                setTurnRight(90);
+                setAhead(150);
+            }
 
-	public void onWin(WinEvent e) {
-		turnRight(36000);
-	}
+            // === CONTROLE DO RADAR ===
+            // Gira o radar continuamente para procurar inimigos
+            if (girandoDireita)
+                setTurnRadarRight(velocidadeRadar);
+            else
+                setTurnRadarLeft(velocidadeRadar);
 
+            // A cada 50 "ticks", muda o sentido e a velocidade do radar para dar dinamismo
+            if (getTime() % 50 == 0) {
+                girandoDireita = !girandoDireita;
+                velocidadeRadar = 5 + Math.random() * 40; // velocidade aleatória entre 5° e 45°
+            }
 
-	public void onHitRobot(HitRobotEvent e) {
-		if (e.getBearing() > -10 && e.getBearing() < 10) {
-			fire(3);
-		}
-		if (e.isMyFault()) {
-			turnRight(10);
-		}
-	}
+            execute(); // executa todos os comandos pendentes sem travar o loop
+        }
+    }
+
+    // ===== EVENTO: QUANDO DETECTA UM INIMIGO =====
+    public void onScannedRobot(ScannedRobotEvent e) {
+        // Calcula quanto o radar e o canhão precisam girar para mirar no inimigo
+        double radarTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getRadarHeading());
+        double gunTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getGunHeading());
+
+        // Ajusta o radar e o canhão na direção do inimigo (sem bloquear o movimento)
+        setTurnRadarRight(radarTurn);
+        setTurnGunRight(gunTurn);
+
+        // Atira continuamente enquanto o canhão estiver pronto (sem parar o robô)
+        if (getGunHeat() == 0) {
+            setFire(2.5); // intensidade do tiro (0.1 a 3)
+        }
+
+        // Mantém o radar girando mesmo após detectar o inimigo
+        if (Math.abs(radarTurn) < 5)
+            setTurnRadarRight(30);
+    }
+
+    // ===== EVENTO: QUANDO BATE NA PAREDE =====
+    public void onHitWall(HitWallEvent e) {
+        double bearing = e.getBearing(); // ângulo em que bateu
+        setTurnRight(-bearing);          // vira para o lado oposto
+        setAhead(100);                   // se afasta da parede
+    }
+
+    // ===== EVENTO: QUANDO BATE EM OUTRO ROBÔ =====
+    public void onHitRobot(HitRobotEvent e) {
+        // Se o inimigo estiver bem à frente, dispara
+        // Calcula o ângulo que o canhão precisa girar para mirar no inimigo
+   		 double gunTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getGunHeading());
+
+    	// Gira o canhão em direção ao inimigo (sem bloquear o movimento)
+    	setTurnGunRight(gunTurn);
+
+   	 	// Atira após alinhar o canhão
+   		 if (getGunHeat() == 0) {
+        	setFire(3); // potência do tiro
+    	}
+
+   		 // Se a colisão foi culpa do nosso robô, desvia um pouco para não travar
+    	if (e.isMyFault()) {
+        	setTurnRight(10);
+        }
+    }
+
+    // ===== EVENTO: QUANDO VENCE A PARTIDA =====
+    public void onWin(WinEvent e) {
+        // Faz uma "dança" girando várias vezes em comemoração
+        for (int i = 0; i < 20; i++) {
+            turnRight(360);
+        }
+    }
 }
