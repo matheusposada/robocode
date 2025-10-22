@@ -16,6 +16,11 @@ public class AndersonSilva extends AdvancedRobot {
     double incremento = 0.08;      // quanto o "passo" aumenta ou diminui (abre/fecha a espiral)
     double angTurn = 3.0;          // ângulo que o corpo gira por ciclo
     boolean expandindo = true;     // indica se a espiral está abrindo (true) ou fechando (false)
+    int count = 0;
+    double gunTurnAmt;
+    String trackName;
+    boolean wantToFire = false;
+    double lastFirePower = 3;
 
     // ===== MÉTODO PRINCIPAL =====
     public void run() {
@@ -24,10 +29,14 @@ public class AndersonSilva extends AdvancedRobot {
         setGunColor(Color.white);
         setRadarColor(Color.white);
         setScanColor(Color.red);
+        setBulletColor(Color.yellow);
 
         // Permite que radar e canhão girem de forma independente do corpo
         setAdjustGunForRobotTurn(true);
         setAdjustRadarForGunTurn(true);
+
+        trackName = null;
+        gunTurnAmt = 10;
 
         // === LOOP PRINCIPAL (executa até o fim da partida) ===
         while (true) {
@@ -57,19 +66,33 @@ public class AndersonSilva extends AdvancedRobot {
             }
 
             // === CONTROLE DO RADAR ===
-            // Gira o radar continuamente para procurar inimigos
-            if (girandoDireita)
-                setTurnRadarRight(velocidadeRadar);
-            else
-                setTurnRadarLeft(velocidadeRadar);
+            // Se NÃO temos alvo, varre em círculos
+            if (trackName == null) {
+                setTurnRadarRight(360);
+                setTurnGunRight(gunTurnAmt);
+            }
+            // Se JÁ temos alvo, o radar será ajustado no onScannedRobot
 
-            // A cada 50 "ticks", muda o sentido e a velocidade do radar para dar dinamismo
-            if (getTime() % 50 == 0) {
-                girandoDireita = !girandoDireita;
-                velocidadeRadar = 5 + Math.random() * 40; // velocidade aleatória entre 5° e 45°
+            // ATIRAR COM CONDIÇÕES MAIS FLEXÍVEIS
+            double gunRemaining = Math.abs(getGunTurnRemaining());
+            double GUN_ANGLE_TOLERANCE = 10.0;  // Aumentado para 10 graus (mais tolerante)
+            
+            if (trackName != null && wantToFire && 
+                gunRemaining <= GUN_ANGLE_TOLERANCE && 
+                getGunHeat() == 0) {  //  Verifica se canhão está frio
+                
+                fire(lastFirePower);
+                wantToFire = false;
             }
 
-            execute(); // executa todos os comandos pendentes sem travar o loop
+            // Lógica de "procura" de alvo usando count
+            count++;
+
+            if (count > 2) gunTurnAmt = -10;
+            if (count > 5) gunTurnAmt = 10;
+            if (count > 11) trackName = null;
+
+            execute(); // Executa todos os comandos pendentes
         }
     }
 
