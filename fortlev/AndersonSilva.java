@@ -113,6 +113,40 @@ public class AndersonSilva extends AdvancedRobot {
         }
     }
 
+    // ===== MÉTODO DE PREDIÇÃO DE TIRO =====
+    /**
+     * Calcula o ângulo para atirar prevendo onde o inimigo estará
+     * Usa predição linear simples (assume que o inimigo continuará em linha reta)
+     */
+    public double calcularAnguloPreditivo() {
+        // Velocidade da bala baseada na potência do tiro
+        double bulletSpeed = 20 - 3 * lastFirePower;
+        
+        // Tempo que a bala levará para chegar ao inimigo
+        double tempoParaImpacto = enemyDistance / bulletSpeed;
+        
+        // Calcula quanto o inimigo se moverá nesse tempo
+        double deslocamentoInimigo = enemyVelocity * tempoParaImpacto;
+        
+        // Posição atual do inimigo em coordenadas absolutas
+        double anguloAbsolutoInimigo = getHeading() + enemyBearing;
+        double enemyX = getX() + Math.sin(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
+        double enemyY = getY() + Math.cos(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
+        
+        // Posição futura do inimigo (predição linear)
+        double futuroX = enemyX + Math.sin(Math.toRadians(enemyHeading)) * deslocamentoInimigo;
+        double futuroY = enemyY + Math.cos(Math.toRadians(enemyHeading)) * deslocamentoInimigo;
+        
+        // Calcula o ângulo para a posição futura
+        double anguloParaFuturo = Math.toDegrees(Math.atan2(
+            futuroX - getX(), 
+            futuroY - getY()
+        ));
+        
+        // Retorna o quanto precisa girar o canhão
+        return normalRelativeAngleDegrees(anguloParaFuturo - getGunHeading());
+    }
+
     // ===== EVENTO: QUANDO DETECTA UM INIMIGO =====
     public void onScannedRobot(ScannedRobotEvent e) {
         // Calcula quanto o radar e o canhão precisam girar para mirar no inimigo
