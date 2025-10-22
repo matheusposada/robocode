@@ -22,6 +22,12 @@ public class AndersonSilva extends AdvancedRobot {
     boolean wantToFire = false;
     double lastFirePower = 3;
 
+    // NOVAS VARIÁVEIS PARA PREDIÇÃO
+    double enemyVelocity = 0;        // velocidade do inimigo
+    double enemyHeading = 0;         // direção do inimigo
+    double enemyDistance = 0;        // distância do inimigo
+    double enemyBearing = 0;         // ângulo relativo ao inimigo
+
     // ===== MÉTODO PRINCIPAL =====
     public void run() {
         // === CONFIGURAÇÃO DE CORES ===
@@ -149,22 +155,57 @@ public class AndersonSilva extends AdvancedRobot {
 
     // ===== EVENTO: QUANDO DETECTA UM INIMIGO =====
     public void onScannedRobot(ScannedRobotEvent e) {
-        // Calcula quanto o radar e o canhão precisam girar para mirar no inimigo
-        double radarTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getRadarHeading());
-        double gunTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getGunHeading());
-
-        // Ajusta o radar e o canhão na direção do inimigo (sem bloquear o movimento)
-        setTurnRadarRight(radarTurn);
-        setTurnGunRight(gunTurn);
-
-        // Atira continuamente enquanto o canhão estiver pronto (sem parar o robô)
-        if (getGunHeat() == 0) {
-            setFire(2.5); // intensidade do tiro (0.1 a 3)
+        
+        // Se já estamos rastreando outro robô, ignora este
+        if (trackName != null && !e.getName().equals(trackName)) {
+            return;
         }
 
-        // Mantém o radar girando mesmo após detectar o inimigo
-        if (Math.abs(radarTurn) < 5)
-            setTurnRadarRight(30);
+        // Define o alvo
+        if (trackName == null) {
+            trackName = e.getName();
+        }
+        
+        // Reseta o contador (alvo encontrado)
+        count = 0;
+		
+		// ✅ ARMAZENA DADOS DO INIMIGO PARA PREDIÇÃO
+        enemyVelocity = e.getVelocity();
+        enemyHeading = e.getHeading();
+        enemyDistance = e.getDistance();
+        enemyBearing = e.getBearing();
+
+    
+        // Calcula o ângulo para o radar ficar travado no alvo
+        double radarTurn = normalRelativeAngleDegrees(
+            getHeading() + e.getBearing() - getRadarHeading()
+        );
+        
+        // Adiciona um pequeno movimento extra para não perder o alvo
+        // Se o radar está girando para a direita, adiciona +20, senão -20
+        if (radarTurn > 0) {
+            radarTurn += 20;
+        } else {
+            radarTurn -= 20;
+        }
+        setTurnRadarRight(radarTurn);
+
+		// ✅ MIRA O CANHÃO COM PREDIÇÃO
+        double gunTurnPreditivo = calcularAnguloPreditivo();
+        setTurnGunRight(gunTurnPreditivo);
+
+
+        // Ajusta a força do disparo dependendo da distância
+        if (e.getDistance() > 200) {
+            lastFirePower = 1.5;
+        } else if (e.getDistance() > 100) {
+            lastFirePower = 2;
+        } else {
+            lastFirePower = 3;
+        }
+
+        wantToFire = true;
+        
     }
 
     // ===== EVENTO: QUANDO BATE NA PAREDE =====
