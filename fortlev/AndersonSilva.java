@@ -210,9 +210,22 @@ public class AndersonSilva extends AdvancedRobot {
 
     // ===== EVENTO: QUANDO BATE NA PAREDE =====
     public void onHitWall(HitWallEvent e) {
-        double bearing = e.getBearing(); // ângulo em que bateu
-        setTurnRight(-bearing);          // vira para o lado oposto
-        setAhead(100);                   // se afasta da parede
+        
+        // Para imediatamente
+        setAhead(0);
+        
+        // Vira 90 graus para o lado oposto da parede
+        double bearing = e.getBearing();
+        setTurnRight(90 - bearing);
+        
+        // Anda bastante para se afastar
+        setAhead(200);
+        
+        // Reseta a espiral para começar pequena novamente
+        passo = 10;
+        expandindo = true;
+        
+        execute();
     }
 
     // ===== EVENTO: QUANDO BATE EM OUTRO ROBÔ =====
