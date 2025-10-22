@@ -70,7 +70,7 @@ public class AndersonSilva extends AdvancedRobot {
             }
 
             // === MOVIMENTO EM ESPIRAL CONTÍNUO ===
-            if (pertoParede) {
+            if (!pertoParede) {
                 setTurnRight(angTurn);  // gira levemente o corpo
                 setAhead(passo);        // anda para frente (passo define o raio da espiral)
 
