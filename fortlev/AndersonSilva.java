@@ -252,7 +252,8 @@ public class AndersonSilva extends AdvancedRobot {
     public void onWin(WinEvent e) {
         // Faz uma "dança" girando várias vezes em comemoração
         for (int i = 0; i < 20; i++) {
-            turnRight(360);
+            turnRight(30);
+			turnLeft(30);
         }
     }
 }
