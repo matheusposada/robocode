@@ -40,29 +40,46 @@ public class AndersonSilva extends AdvancedRobot {
 
         // === LOOP PRINCIPAL (executa até o fim da partida) ===
         while (true) {
-            // === MOVIMENTO EM ESPIRAL CONTÍNUO ===
-            setTurnRight(angTurn);  // gira levemente o corpo
-            setAhead(passo);        // anda para frente (passo define o raio da espiral)
-
-            // Alterna entre expandir e contrair a espiral
-            if (expandindo) {
-                passo = passo + incremento;            // aumenta o raio
-                if (passo > 150) expandindo = false; // muda para fase de contração
-            } else {
-                passo = passo - incremento;            // diminui o raio
-                if (passo < 10) {
-                    expandindo = true;          // volta a expandir
-                    setTurnRight(45);           // muda o centro da espiral
-                    setAhead(100);              // avança um pouco para deslocar o padrão no mapa
-                }
+            // === EVITAR PAREDES (CHECAR PRIMEIRO!) ===
+            double margemSeguranca = 80;
+            boolean pertoParede = false;
+            
+            if (getX() < margemSeguranca || 
+                getX() > getBattleFieldWidth() - margemSeguranca ||
+                getY() < margemSeguranca || 
+                getY() > getBattleFieldHeight() - margemSeguranca) {
+                
+                pertoParede = true;
+                
+                // Calcula direção para o centro do campo
+                double anguloParaCentro = Math.toDegrees(Math.atan2(
+                    getBattleFieldWidth()/2 - getX(),
+                    getBattleFieldHeight()/2 - getY()
+                ));
+                
+                double virar = normalRelativeAngleDegrees(anguloParaCentro - getHeading());
+                
+                setTurnRight(virar);
+                setAhead(150);
             }
 
-            // === EVITAR PAREDES ===
-            // Se o robô estiver próximo das bordas do campo de batalha, muda de direção
-            if (getX() < 100 || getX() > getBattleFieldWidth() - 100 ||
-                getY() < 100 || getY() > getBattleFieldHeight() - 100) {
-                setTurnRight(90);
-                setAhead(150);
+            // === MOVIMENTO EM ESPIRAL CONTÍNUO ===
+            if (pertoParede) {
+                setTurnRight(angTurn);  // gira levemente o corpo
+                setAhead(passo);        // anda para frente (passo define o raio da espiral)
+
+                // Alterna entre expandir e contrair a espiral
+                if (expandindo) {
+                    passo = passo + incremento;            // aumenta o raio
+                    if (passo > 150) expandindo = false; // muda para fase de contração
+                } else {
+                    passo = passo - incremento;            // diminui o raio
+                    if (passo < 10) {
+                        expandindo = true;          // volta a expandir
+                        setTurnRight(45);           // muda o centro da espiral
+                        setAhead(100);              // avança um pouco para deslocar o padrão no mapa
+                    }
+                }
             }
 
             // === CONTROLE DO RADAR ===
