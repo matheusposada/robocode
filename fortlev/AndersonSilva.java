@@ -3,6 +3,10 @@ package fortlev;
 import robocode.*;
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 import java.awt.*;
+import robocode.HitWallEvent;
+import robocode.HitRobotEvent;
+import java.awt.geom.Point2D;
+
 
 /**
  * AndersonSilva - a robot by (Arthur Abdala, Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
@@ -124,33 +128,42 @@ public class AndersonSilva extends AdvancedRobot {
      * Calcula o ângulo para atirar prevendo onde o inimigo estará
      * Usa predição linear simples (assume que o inimigo continuará em linha reta)
      */
-    public double calcularAnguloPreditivo() {
+   		public double calcularAnguloPreditivo() {
         // Velocidade da bala baseada na potência do tiro
         double bulletSpeed = 20 - 3 * lastFirePower;
-        
-        // Tempo que a bala levará para chegar ao inimigo
-        double tempoParaImpacto = enemyDistance / bulletSpeed;
-        
-        // Calcula quanto o inimigo se moverá nesse tempo
-        double deslocamentoInimigo = enemyVelocity * tempoParaImpacto;
-        
+		//posicao atual do robo
+ 		double myX = getX();
+    	double myY = getY();
+               
         // Posição atual do inimigo em coordenadas absolutas
-        double anguloAbsolutoInimigo = getHeading() + enemyBearing;
-        double enemyX = getX() + Math.sin(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
-        double enemyY = getY() + Math.cos(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
-        
-        // Posição futura do inimigo (predição linear)
-        double futuroX = enemyX + Math.sin(Math.toRadians(enemyHeading)) * deslocamentoInimigo;
-        double futuroY = enemyY + Math.cos(Math.toRadians(enemyHeading)) * deslocamentoInimigo;
-        
+    	double anguloAbsolutoInimigo = getHeading() + enemyBearing;
+    	double enemyX = myX + Math.sin(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
+    	double enemyY = myY + Math.cos(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;;
+		
+		//velocidade e direcao do adversario
+		double headingRad = Math.toRadians(enemyHeading); // direção atual do inimigo em radianos
+    	double velocity = enemyVelocity;                  // velocidade atual do inimigo
+	
+		// ===== INICIALIZAÇÃO DA POSIÇÃO FUTURA =====
+    	double futuroX = enemyX;
+    	double futuroY = enemyY;
+		   
+        // Simula o movimento do inimigo por ticks até a bala alcançar
+   		double deltaTime = 1; // passo de 1 tick
+    	for (double t = 0; t * bulletSpeed < Point2D.distance(myX, myY, futuroX, futuroY); t += deltaTime) {
+        	// Atualiza posição futura com base na velocidade e direção do inimigo
+        	futuroX += Math.sin(headingRad) * velocity * deltaTime;
+        	futuroY += Math.cos(headingRad) * velocity * deltaTime;
+
+        	// Limita a posição futura para não sair do campo de batalha
+        	futuroX = Math.max(Math.min(futuroX, getBattleFieldWidth() - 18), 18);
+        	futuroY = Math.max(Math.min(futuroY, getBattleFieldHeight() - 18), 18);
+    }
         // Calcula o ângulo para a posição futura
-        double anguloParaFuturo = Math.toDegrees(Math.atan2(
-            futuroX - getX(), 
-            futuroY - getY()
-        ));
+    	double anguloParaFuturo = Math.toDegrees(Math.atan2(futuroX - myX, futuroY - myY));
         
         // Retorna o quanto precisa girar o canhão
-        return normalRelativeAngleDegrees(anguloParaFuturo - getGunHeading());
+    	return normalRelativeAngleDegrees(anguloParaFuturo - getGunHeading());
     }
 
     // ===== EVENTO: QUANDO DETECTA UM INIMIGO =====
@@ -233,7 +246,7 @@ public class AndersonSilva extends AdvancedRobot {
         // Se o inimigo estiver bem à frente, dispara
         // Calcula o ângulo que o canhão precisa girar para mirar no inimigo
    		 double gunTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getGunHeading());
-
+		 
     	// Gira o canhão em direção ao inimigo (sem bloquear o movimento)
     	setTurnGunRight(gunTurn);
 
@@ -257,3 +270,4 @@ public class AndersonSilva extends AdvancedRobot {
         }
     }
 }
+
