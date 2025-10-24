@@ -25,6 +25,8 @@ public class AndersonSilva extends AdvancedRobot {
     String trackName;
     boolean wantToFire = false;
     double lastFirePower = 3;
+    int direcaoMovimento = 1;  // 1 = frente, -1 = trás (para esquiva)
+	long ultimoTempoMudancaDirecao = 0;
 
     // NOVAS VARIÁVEIS PARA PREDIÇÃO
     double enemyVelocity = 0;        // velocidade do inimigo
@@ -75,8 +77,17 @@ public class AndersonSilva extends AdvancedRobot {
 
             // === MOVIMENTO EM ESPIRAL CONTÍNUO ===
             if (!pertoParede) {
-                setTurnRight(angTurn);  // gira levemente o corpo
-                setAhead(passo);        // anda para frente (passo define o raio da espiral)
+                // Se estiver próximo: espiral mais apertada e rápida
+                if (trackName != null && enemyDistance < 300) {
+                    angTurn = 5.0;
+                    incremento = 0.15;
+                } else { 
+                    angTurn = 3.0;
+                    incremento = 0.08;
+                }
+                
+                setTurnRight(angTurn * direcaoMovimento);
+                setAhead(passo * direcaoMovimento);
 
                 // Alterna entre expandir e contrair a espiral
                 if (expandindo) {
@@ -120,6 +131,12 @@ public class AndersonSilva extends AdvancedRobot {
             if (count > 11) trackName = null;
 
             execute(); // Executa todos os comandos pendentes
+
+            // Muda direção periodicamente para esquiva imprevisível
+            if (getTime() - ultimoTempoMudancaDirecao > 50 && Math.random() > 0.7) {
+                direcaoMovimento *= -1;
+                ultimoTempoMudancaDirecao = getTime();
+            }
         }
     }
 
@@ -182,7 +199,7 @@ public class AndersonSilva extends AdvancedRobot {
         // Reseta o contador (alvo encontrado)
         count = 0;
 		
-		// ✅ ARMAZENA DADOS DO INIMIGO PARA PREDIÇÃO
+		// ARMAZENA DADOS DO INIMIGO PARA PREDIÇÃO
         enemyVelocity = e.getVelocity();
         enemyHeading = e.getHeading();
         enemyDistance = e.getDistance();
@@ -203,7 +220,7 @@ public class AndersonSilva extends AdvancedRobot {
         }
         setTurnRadarRight(radarTurn);
 
-		// ✅ MIRA O CANHÃO COM PREDIÇÃO
+		// MIRA O CANHÃO COM PREDIÇÃO
         double gunTurnPreditivo = calcularAnguloPreditivo();
         setTurnGunRight(gunTurnPreditivo);
 
