@@ -287,4 +287,7 @@ public class AndersonSilva extends AdvancedRobot {
         }
     }
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 38cd8de (Teste de do modelo ARMA para comparacao com o original)
