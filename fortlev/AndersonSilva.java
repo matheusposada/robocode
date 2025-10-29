@@ -52,56 +52,58 @@ public class AndersonSilva extends AdvancedRobot {
 
         // === LOOP PRINCIPAL (executa até o fim da partida) ===
         while (true) {
-            // === EVITAR PAREDES (CHECAR PRIMEIRO!) ===
-            double margemSeguranca = 80;
-            boolean pertoParede = false;
+            // === EVITAR PAREDES (USANDO "WALL SMOOTHING") ===
+			double margemSeguranca = 80;
+			double x = getX();
+			double y = getY();
+			double largura = getBattleFieldWidth();
+			double altura = getBattleFieldHeight();
+			boolean pertoParede = false;
             
-            if (getX() < margemSeguranca || 
-                getX() > getBattleFieldWidth() - margemSeguranca ||
-                getY() < margemSeguranca || 
-                getY() > getBattleFieldHeight() - margemSeguranca) {
-                
-                pertoParede = true;
-                
-                // Calcula direção para o centro do campo
-                double anguloParaCentro = Math.toDegrees(Math.atan2(
-                    getBattleFieldWidth()/2 - getX(),
-                    getBattleFieldHeight()/2 - getY()
-                ));
-                
-                double virar = normalRelativeAngleDegrees(anguloParaCentro - getHeading());
-                
-                setTurnRight(virar);
-                setAhead(150);
-            }
+           // Verifica proximidade das paredes
+			if (x < margemSeguranca || x > largura - margemSeguranca ||
+			    y < margemSeguranca || y > altura - margemSeguranca) {
+			    pertoParede = true;
 
-            // === MOVIMENTO EM ESPIRAL CONTÍNUO ===
-            if (!pertoParede) {
-                // Se estiver próximo: espiral mais apertada e rápida
-                if (trackName != null && enemyDistance < 300) {
-                    angTurn = 5.0;
-                    incremento = 0.15;
-                } else { 
-                    angTurn = 3.0;
-                    incremento = 0.08;
-                }
-                
-                setTurnRight(angTurn * direcaoMovimento);
-                setAhead(passo * direcaoMovimento);
+    			// Calcula ângulo para o centro do campo
+			    double anguloCentro = Math.toDegrees(Math.atan2(
+		        	largura / 2 - x,
+		        	altura / 2 - y
+			    ));
 
-                // Alterna entre expandir e contrair a espiral
-                if (expandindo) {
-                    passo = passo + incremento;            // aumenta o raio
-                    if (passo > 150) expandindo = false; // muda para fase de contração
-                } else {
-                    passo = passo - incremento;            // diminui o raio
-                    if (passo < 10) {
-                        expandindo = true;          // volta a expandir
-                        setTurnRight(45);           // muda o centro da espiral
-                        setAhead(100);              // avança um pouco para deslocar o padrão no mapa
-                    }
-                }
-            }
+    			double anguloCorrecao = normalRelativeAngleDegrees(anguloCentro - getHeading());
+			    setTurnRight(anguloCorrecao);
+			    setAhead(150);
+			} else {
+    			// Movimento normal (espiral com suavização)
+   				 double anguloMovimento = angTurn * direcaoMovimento;
+
+    			// --- Ajuste de direção para não apontar para fora do mapa ---
+			    double proximoX = x + Math.sin(Math.toRadians(getHeading() + anguloMovimento)) * passo;
+			    double proximoY = y + Math.cos(Math.toRadians(getHeading() + anguloMovimento)) * passo;
+
+   				if (proximoX < 30 || proximoX > largura - 30 || proximoY < 30 || proximoY > altura - 30) {
+		        // Gira levemente para longe da parede
+        		setTurnRight(90 * Math.signum(Math.random() - 0.5));
+			    } else {
+			        setTurnRight(anguloMovimento);
+			    }
+
+  			  	setAhead(passo * direcaoMovimento);
+
+    			// Alterna entre expandir e contrair a espiral
+			    if (expandindo) {
+			        passo += incremento;
+		        if (passo > 150) expandindo = false;
+			    } else {
+			        passo -= incremento;
+			        if (passo < 10) {
+            			expandindo = true;
+			            setTurnRight(45);
+            			setAhead(100);
+        			}
+    			}
+			}
 
             // === CONTROLE DO RADAR ===
             // Se NÃO temos alvo, varre em círculos
@@ -133,7 +135,7 @@ public class AndersonSilva extends AdvancedRobot {
             execute(); // Executa todos os comandos pendentes
 
             // Muda direção periodicamente para esquiva imprevisível
-            if (getTime() - ultimoTempoMudancaDirecao > 50 && Math.random() > 0.7) {
+            if (getTime() - ultimoTempoMudancaDirecao > 40 && Math.random() > 0.6) {
                 direcaoMovimento *= -1;
                 ultimoTempoMudancaDirecao = getTime();
             }
@@ -260,22 +262,20 @@ public class AndersonSilva extends AdvancedRobot {
 
     // ===== EVENTO: QUANDO BATE EM OUTRO ROBÔ =====
     public void onHitRobot(HitRobotEvent e) {
-        // Se o inimigo estiver bem à frente, dispara
-        // Calcula o ângulo que o canhão precisa girar para mirar no inimigo
-   		 double gunTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getGunHeading());
-		 
-    	// Gira o canhão em direção ao inimigo (sem bloquear o movimento)
-    	setTurnGunRight(gunTurn);
+        double bearing = e.getBearing();
 
-   	 	// Atira após alinhar o canhão
-   		 if (getGunHeat() == 0) {
-        	setFire(3); // potência do tiro
+    	// Se o inimigo estiver na frente, atira forte
+	    if (Math.abs(bearing) < 30 && getGunHeat() == 0) {
+    	    setFire(3);
+	    }
+
+    	// Sempre tenta se afastar para não travar
+	    if (e.isMyFault()) {
+    	    // Gira para longe e recua
+        	setTurnRight(-bearing + (Math.random() > 0.5 ? 45 : -45));
+	        setBack(150 + Math.random() * 100);
+	        direcaoMovimento *= -1; // Inverte direção de movimento para ficar imprevisível
     	}
-
-   		 // Se a colisão foi culpa do nosso robô, desvia um pouco para não travar
-    	if (e.isMyFault()) {
-        	setTurnRight(10);
-        }
     }
 
     // ===== EVENTO: QUANDO VENCE A PARTIDA =====
@@ -287,7 +287,3 @@ public class AndersonSilva extends AdvancedRobot {
         }
     }
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 38cd8de (Teste de do modelo ARMA para comparacao com o original)
