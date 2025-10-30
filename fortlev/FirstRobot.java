@@ -506,13 +506,18 @@ public class FirstRobot extends AdvancedRobot {
 
     // ===== EVENTO: QUANDO BATE NA PAREDE =====
     public void onHitWall(HitWallEvent e) {
+        
+        // Para imediatamente
         setAhead(0);
         
+        // Vira 90 graus para o lado oposto da parede
         double bearing = e.getBearing();
         setTurnRight(90 - bearing);
         
+        // Anda bastante para se afastar
         setAhead(200);
         
+        // Reseta a espiral para começar pequena novamente
         passo = 10;
         expandindo = true;
         
@@ -521,18 +526,22 @@ public class FirstRobot extends AdvancedRobot {
 
     // ===== EVENTO: QUANDO BATE EM OUTRO ROBÔ =====
     public void onHitRobot(HitRobotEvent e) {
-        double gunTurn = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getGunHeading());
-        
-        setTurnGunRight(gunTurn);
+        double bearing = e.getBearing();
 
-        if (getGunHeat() == 0) {
-            setFire(3);
-        }
+    	// Se o inimigo estiver na frente, atira forte
+	    if (Math.abs(bearing) < 30 && getGunHeat() == 0) {
+    	    setFire(3);
+	    }
 
-        if (e.isMyFault()) {
-            setTurnRight(10);
-        }
+    	// Sempre tenta se afastar para não travar
+	    if (e.isMyFault()) {
+    	    // Gira para longe e recua
+        	setTurnRight(-bearing + (Math.random() > 0.5 ? 45 : -45));
+	        setBack(150 + Math.random() * 100);
+	        direcaoMovimento *= -1; // Inverte direção de movimento para ficar imprevisível
+    	}
     }
+
 
     // ===== EVENTO: QUANDO VENCE =====
     public void onWin(WinEvent e) {
