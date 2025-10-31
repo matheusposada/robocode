@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 /**
  * AndersonSilva - a robot by (Arthur Abdala, Arthur de Oliveira, Mateus Raffaelli e Matheus Posada)
- * Versão melhorada com predição avançada
+ * Versão melhorada com predição avançada e troca de alvo após múltiplos erros
  */
 public class FirstRobot extends AdvancedRobot {
 
@@ -30,8 +30,8 @@ public class FirstRobot extends AdvancedRobot {
     long ultimoTempoMudancaDirecao = 0;
     
     // CONFIGURAÇÃO DE DISTÂNCIA PARA TRAVAR RADAR
-    static final double DISTANCIA_TRAVAR_RADAR = 300; // Só trava se inimigo estiver a menos de 300 pixels
-    static final double DISTANCIA_COMBATE = 250; // Distância ideal para começar movimentação em espiral
+    static final double DISTANCIA_TRAVAR_RADAR = 250; // Só trava se inimigo estiver a menos de 300 pixels
+    static final double DISTANCIA_COMBATE = 150; // Distância ideal para começar movimentação em espiral
 
     // VARIÁVEIS PARA PREDIÇÃO BÁSICA
     double enemyVelocity = 0;
@@ -49,6 +49,12 @@ public class FirstRobot extends AdvancedRobot {
     // Estatísticas para padrões circulares
     double somaGirosPorTick = 0;
     int contadorScans = 0;
+    
+    // ===== VARIÁVEIS PARA CONTROLE DE ERROS =====
+    int missedShots = 0; // Contador de disparos errados consecutivos
+    static final int MAX_MISSED_SHOTS = 5; // Máximo de erros antes de trocar de alvo
+    long lastHitTime = 0; // Tempo do último acerto
+    boolean searchingNewTarget = false; // Flag indicando se está procurando novo alvo
     
     // ===== CLASSE INTERNA PARA ARMAZENAR ESTADO DO INIMIGO =====
     class EnemyState {
@@ -88,6 +94,11 @@ public class FirstRobot extends AdvancedRobot {
             double largura = getBattleFieldWidth();
             double altura = getBattleFieldHeight();
             double margemSeguranca = 80;
+            
+            // ===== VERIFICA SE PRECISA TROCAR DE ALVO =====
+            if (missedShots >= MAX_MISSED_SHOTS && trackName != null) {
+                trocarAlvo();
+            }
             
             // ===== DECISÃO DE MOVIMENTO BASEADA NA DISTÂNCIA DO INIMIGO =====
             
@@ -161,7 +172,7 @@ public class FirstRobot extends AdvancedRobot {
 
             // === CONTROLE DO RADAR ===
             // Se NÃO temos alvo OU o alvo está longe, varre em círculos
-            if (trackName == null || enemyDistance > DISTANCIA_TRAVAR_RADAR) {
+            if (trackName == null || enemyDistance > DISTANCIA_TRAVAR_RADAR || searchingNewTarget) {
                 setTurnRadarRight(360);
                 setTurnGunRight(gunTurnAmt);
             }
@@ -195,6 +206,34 @@ public class FirstRobot extends AdvancedRobot {
                 ultimoTempoMudancaDirecao = getTime();
             }
         }
+    }
+
+    // ===== MÉTODO PARA TROCAR DE ALVO =====
+    /**
+     * Troca de alvo quando muitos disparos são errados consecutivamente
+     * Gira o radar rapidamente para encontrar um novo alvo
+     */
+    private void trocarAlvo() {
+        out.println("MUITOS ERROS! Trocanco de alvo... Erros consecutivos: " + missedShots);
+        
+        // Limpa o alvo atual
+        trackName = null;
+        searchingNewTarget = true;
+        missedShots = 0;
+        
+        // Limpa histórico
+        historicoInimigo.clear();
+        contadorScans = 0;
+        somaGirosPorTick = 0;
+        
+        // Gira o radar rapidamente para encontrar novo alvo
+        setTurnRadarRight(720); // Duas voltas completas
+        
+        // Movimentação evasiva enquanto procura novo alvo
+        setTurnRight(90);
+        setAhead(150);
+        
+        out.println("Procurando novo alvo...");
     }
 
     // ===== MÉTODO DE PREDIÇÃO AVANÇADA =====
@@ -332,12 +371,21 @@ public class FirstRobot extends AdvancedRobot {
 
     // ===== EVENTO: QUANDO DETECTA UM INIMIGO =====
     public void onScannedRobot(ScannedRobotEvent e) {
+        // Se está procurando novo alvo, aceita qualquer inimigo
+        if (searchingNewTarget) {
+            trackName = e.getName();
+            searchingNewTarget = false;
+            missedShots = 0; // Reseta contador de erros
+            out.println("NOVO ALVO ENCONTRADO: " + trackName);
+        }
+        
         if (trackName != null && !e.getName().equals(trackName)) {
             return;
         }
 
         if (trackName == null) {
             trackName = e.getName();
+            missedShots = 0; // Reseta contador ao encontrar novo alvo
         }
         
         count = 0;
@@ -407,19 +455,15 @@ public class FirstRobot extends AdvancedRobot {
         wantToFire = true;
     }
 
-    // ===== EVENTO: QUANDO BATE NA PAREDE =====
-    public void onHitWall(HitWallEvent e) {
-        setAhead(0);
-        double bearing = e.getBearing();
-        setTurnRight(90 - bearing);
-        setAhead(200);
-        passo = 10;
-        expandindo = true;
-        execute();
-    }
-
-    // ===== EVENTO: QUANDO BATE EM OUTRO ROBÔ =====
+    // ===== EVENTO: QUANDO ACERTA UM INIMIGO =====
     public void onHitRobot(HitRobotEvent e) {
+        // Se acertou um inimigo, reseta o contador de erros
+        if (e.getName().equals(trackName)) {
+            missedShots = 0;
+            lastHitTime = getTime();
+            out.println("ACERTOU! Resetando contador de erros.");
+        }
+
         double bearing = e.getBearing();
 
         if (Math.abs(bearing) < 30 && getGunHeat() == 0) {
@@ -432,6 +476,35 @@ public class FirstRobot extends AdvancedRobot {
             direcaoMovimento *= -1;
         }
     }
+
+    // ===== EVENTO: QUANDO A BALA ACERTA =====
+    public void onBulletHit(BulletHitEvent e) {
+        // Se acertou o alvo atual, reseta o contador de erros
+        if (e.getName().equals(trackName)) {
+            missedShots = 0;
+            lastHitTime = getTime();
+            out.println("TIRO CERTO! Resetando contador de erros.");
+        }
+    }
+
+    // ===== EVENTO: QUANDO A BALA ERRA =====
+    public void onBulletMissed(BulletMissedEvent e) {
+        // Incrementa contador de erros apenas se temos um alvo
+        if (trackName != null) {
+            missedShots++;
+            out.println("TIRO ERROU! Erros consecutivos: " + missedShots);
+            
+            // Se atingiu o limite, troca de alvo
+            if (missedShots >= MAX_MISSED_SHOTS) {
+                trocarAlvo();
+            }
+        }
+    }
+
+    // ===== EVENTO: QUANDO BATE NA PAREDE =====
+	public void onHitWall(HitWallEvent e){
+		direcaoMovimento = -direcaoMovimento;//bate e volta
+	}
 
     // ===== EVENTO: QUANDO VENCE A PARTIDA =====
     public void onWin(WinEvent e) {
