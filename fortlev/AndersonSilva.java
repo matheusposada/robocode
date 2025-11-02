@@ -28,11 +28,16 @@ public class AndersonSilva extends AdvancedRobot {
     int direcaoMovimento = 1;  // 1 = frente, -1 = trás (para esquiva)
 	long ultimoTempoMudancaDirecao = 0;
 
-    // NOVAS VARIÁVEIS PARA PREDIÇÃO
+    // VARIÁVEIS PARA PREDIÇÃO
     double enemyVelocity = 0;        // velocidade do inimigo
     double enemyHeading = 0;         // direção do inimigo
     double enemyDistance = 0;        // distância do inimigo
     double enemyBearing = 0;         // ângulo relativo ao inimigo
+
+    // VARIÁVEIS PARA CONTROLE DE MODO
+    static final double DISTANCIA_ATIVACAO_ESPIRAL = 150.0;
+    boolean modoEspiral = false;
+    long ultimoScan = 0;
 
     // ===== MÉTODO PRINCIPAL =====
     public void run() {
@@ -52,58 +57,20 @@ public class AndersonSilva extends AdvancedRobot {
 
         // === LOOP PRINCIPAL (executa até o fim da partida) ===
         while (true) {
-            // === EVITAR PAREDES (USANDO "WALL SMOOTHING") ===
-			double margemSeguranca = 80;
-			double x = getX();
-			double y = getY();
-			double largura = getBattleFieldWidth();
-			double altura = getBattleFieldHeight();
-			boolean pertoParede = false;
-            
-           // Verifica proximidade das paredes
-			if (x < margemSeguranca || x > largura - margemSeguranca ||
-			    y < margemSeguranca || y > altura - margemSeguranca) {
-			    pertoParede = true;
+            // Verifica se perdeu o alvo
+            if (trackName != null && getTime() - ultimoScan > 30) {
+                trackName = null;
+                modoEspiral = false;
+            }
 
-    			// Calcula ângulo para o centro do campo
-			    double anguloCentro = Math.toDegrees(Math.atan2(
-		        	largura / 2 - x,
-		        	altura / 2 - y
-			    ));
-
-    			double anguloCorrecao = normalRelativeAngleDegrees(anguloCentro - getHeading());
-			    setTurnRight(anguloCorrecao);
-			    setAhead(150);
-			} else {
-    			// Movimento normal (espiral com suavização)
-   				 double anguloMovimento = angTurn * direcaoMovimento;
-
-    			// --- Ajuste de direção para não apontar para fora do mapa ---
-			    double proximoX = x + Math.sin(Math.toRadians(getHeading() + anguloMovimento)) * passo;
-			    double proximoY = y + Math.cos(Math.toRadians(getHeading() + anguloMovimento)) * passo;
-
-   				if (proximoX < 30 || proximoX > largura - 30 || proximoY < 30 || proximoY > altura - 30) {
-		        // Gira levemente para longe da parede
-        		setTurnRight(90 * Math.signum(Math.random() - 0.5));
-			    } else {
-			        setTurnRight(anguloMovimento);
-			    }
-
-  			  	setAhead(passo * direcaoMovimento);
-
-    			// Alterna entre expandir e contrair a espiral
-			    if (expandindo) {
-			        passo += incremento;
-		        if (passo > 150) expandindo = false;
-			    } else {
-			        passo -= incremento;
-			        if (passo < 10) {
-            			expandindo = true;
-			            setTurnRight(45);
-            			setAhead(100);
-        			}
-    			}
-			}
+            // === MOVIMENTO BASEADO NO MODO ===
+            if (trackName == null) {
+                movimentoBusca();
+            } else if (!modoEspiral) {
+                movimentoPerseguicao();
+            } else {
+                movimentoEspiral();
+            }
 
             // === CONTROLE DO RADAR ===
             // Se NÃO temos alvo, varre em círculos
@@ -138,6 +105,90 @@ public class AndersonSilva extends AdvancedRobot {
             if (getTime() - ultimoTempoMudancaDirecao > 40 && Math.random() > 0.6) {
                 direcaoMovimento *= -1;
                 ultimoTempoMudancaDirecao = getTime();
+            }
+        }
+    }
+
+        // ===== MOVIMENTO DE BUSCA =====
+    private void movimentoBusca() {
+        setTurnRadarRight(360);
+        setTurnRight(5);
+        setAhead(50);
+    }
+
+    // ===== MOVIMENTO DE PERSEGUIÇÃO =====
+    private void movimentoPerseguicao() {
+        double margemSeguranca = 80;
+        double x = getX();
+        double y = getY();
+        double largura = getBattleFieldWidth();
+        double altura = getBattleFieldHeight();
+
+        double anguloAbsolutoInimigo = getHeading() + enemyBearing;
+        double enemyX = x + Math.sin(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
+        double enemyY = y + Math.cos(Math.toRadians(anguloAbsolutoInimigo)) * enemyDistance;
+
+        double anguloParaInimigo = Math.toDegrees(Math.atan2(enemyX - x, enemyY - y));
+        double virar = normalRelativeAngleDegrees(anguloParaInimigo - getHeading());
+
+        if (x < margemSeguranca || x > largura - margemSeguranca ||
+            y < margemSeguranca || y > altura - margemSeguranca) {
+            
+            double anguloCentro = Math.toDegrees(Math.atan2(
+                largura / 2 - x,
+                altura / 2 - y
+            ));
+            double anguloCorrecao = normalRelativeAngleDegrees(anguloCentro - getHeading());
+            setTurnRight(anguloCorrecao);
+            setAhead(100);
+        } else {
+            setTurnRight(virar);
+            setAhead(100);
+        }
+    }
+
+    // ===== MOVIMENTO EM ESPIRAL =====
+    private void movimentoEspiral() {
+        double margemSeguranca = 80;
+        double x = getX();
+        double y = getY();
+        double largura = getBattleFieldWidth();
+        double altura = getBattleFieldHeight();
+
+        if (x < margemSeguranca || x > largura - margemSeguranca ||
+            y < margemSeguranca || y > altura - margemSeguranca) {
+            
+            double anguloCentro = Math.toDegrees(Math.atan2(
+                largura / 2 - x,
+                altura / 2 - y
+            ));
+            double anguloCorrecao = normalRelativeAngleDegrees(anguloCentro - getHeading());
+            setTurnRight(anguloCorrecao);
+            setAhead(150);
+        } else {
+            double anguloMovimento = angTurn * direcaoMovimento;
+
+            double proximoX = x + Math.sin(Math.toRadians(getHeading() + anguloMovimento)) * passo;
+            double proximoY = y + Math.cos(Math.toRadians(getHeading() + anguloMovimento)) * passo;
+
+            if (proximoX < 30 || proximoX > largura - 30 || proximoY < 30 || proximoY > altura - 30) {
+                setTurnRight(90 * Math.signum(Math.random() - 0.5));
+            } else {
+                setTurnRight(anguloMovimento);
+            }
+
+            setAhead(passo * direcaoMovimento);
+
+            if (expandindo) {
+                passo += incremento;
+                if (passo > 150) expandindo = false;
+            } else {
+                passo -= incremento;
+                if (passo < 10) {
+                    expandindo = true;
+                    setTurnRight(45);
+                    setAhead(100);
+                }
             }
         }
     }
@@ -200,6 +251,7 @@ public class AndersonSilva extends AdvancedRobot {
         
         // Reseta o contador (alvo encontrado)
         count = 0;
+        ultimoScan = getTime();
 		
 		// ARMAZENA DADOS DO INIMIGO PARA PREDIÇÃO
         enemyVelocity = e.getVelocity();
@@ -237,6 +289,16 @@ public class AndersonSilva extends AdvancedRobot {
         }
 
         wantToFire = true;
+
+        if (enemyDistance <= DISTANCIA_ATIVACAO_ESPIRAL) {
+            if (!modoEspiral) {
+                modoEspiral = true;
+                passo = 10;
+                expandindo = true;
+            }
+        } else {
+            modoEspiral = false;
+        }
         
     }
 
