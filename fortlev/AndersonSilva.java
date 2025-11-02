@@ -34,6 +34,8 @@ public class AndersonSilva extends AdvancedRobot {
     double enemyHeading = 0;         // direção do inimigo
     double enemyDistance = 0;        // distância do inimigo
     double enemyBearing = 0;         // ângulo relativo ao inimigo
+    double enemyEnergy = 100;
+    double energiaAnterior = 100;
 
     // VARIÁVEIS PARA CONTROLE DE MODO
     static final double DISTANCIA_ATIVACAO_ESPIRAL = 150.0;
@@ -270,6 +272,14 @@ public class AndersonSilva extends AdvancedRobot {
         enemyHeading = e.getHeading();
         enemyDistance = e.getDistance();
         enemyBearing = e.getBearing();
+        energiaAnterior = enemyEnergy;
+        enemyEnergy = e.getEnergy();
+
+        double diferencaEnergia = energiaAnterior - enemyEnergy;
+        if (diferencaEnergia >= 0.1 && diferencaEnergia <= 3.0) {
+            direcaoMovimento *= -1;
+            direcaoLateral *= -1;
+        }
 
     
         // Calcula o ângulo para o radar ficar travado no alvo
