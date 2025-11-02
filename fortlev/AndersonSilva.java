@@ -27,6 +27,7 @@ public class AndersonSilva extends AdvancedRobot {
     double lastFirePower = 3;
     int direcaoMovimento = 1;  // 1 = frente, -1 = trás (para esquiva)
 	long ultimoTempoMudancaDirecao = 0;
+    int direcaoLateral = 1;
 
     // VARIÁVEIS PARA PREDIÇÃO
     double enemyVelocity = 0;        // velocidade do inimigo
@@ -142,8 +143,19 @@ public class AndersonSilva extends AdvancedRobot {
             setTurnRight(anguloCorrecao);
             setAhead(100);
         } else {
-            setTurnRight(virar);
+           double anguloPerp = normalRelativeAngleDegrees(anguloAbsolutoInimigo - getHeading() + 90 * direcaoLateral);
+            
+            if (enemyDistance > 300) {
+                double anguloMisto = (virar + anguloPerp) / 2;
+                setTurnRight(anguloMisto);
+            } else {
+                setTurnRight(anguloPerp);
+            }
             setAhead(100);
+            
+            if (Math.random() > 0.9) {
+                direcaoLateral *= -1;
+            }
         }
     }
 
@@ -318,6 +330,7 @@ public class AndersonSilva extends AdvancedRobot {
         // Reseta a espiral para começar pequena novamente
         passo = 10;
         expandindo = true;
+        direcaoLateral *= -1;
         
         execute();
     }
@@ -337,6 +350,7 @@ public class AndersonSilva extends AdvancedRobot {
         	setTurnRight(-bearing + (Math.random() > 0.5 ? 45 : -45));
 	        setBack(150 + Math.random() * 100);
 	        direcaoMovimento *= -1; // Inverte direção de movimento para ficar imprevisível
+            direcaoLateral *= -1;
     	}
     }
 
