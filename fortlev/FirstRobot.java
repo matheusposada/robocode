@@ -76,7 +76,7 @@ public class FirstRobot extends AdvancedRobot {
     public void run() {
         // === CONFIGURAÇÃO DE CORES ===
         setBodyColor(Color.black);
-        setGunColor(Color.white);
+        setGunColor(Color.yellow);
         setRadarColor(Color.white);
         setScanColor(Color.red);
         setBulletColor(Color.yellow);
