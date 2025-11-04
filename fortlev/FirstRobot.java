@@ -433,20 +433,10 @@ public class FirstRobot extends AdvancedRobot {
         enemyHeadingAnterior = enemyHeading;
         ultimoScanTime = getTime();
     
-        // ===== CONTROLE DO RADAR - SÓ TRAVA SE ESTIVER PRÓXIMO =====
-        if (e.getDistance() <= DISTANCIA_TRAVAR_RADAR) {
-            // Inimigo próximo: TRAVA o radar nele
-            double radarTurn = normalRelativeAngleDegrees(
-                getHeading() + e.getBearing() - getRadarHeading()
-            );
-            
-            if (radarTurn > 0) {
-                radarTurn += 20;
-            } else {
-                radarTurn -= 20;
-            }
-            setTurnRadarRight(radarTurn);
-        }
+	    // ===== CONTROLE DO RADAR - TRAVAMENTO FIRME =====
+		double radarOffset = normalRelativeAngleDegrees(getHeading() + e.getBearing() - getRadarHeading());
+		double ajusteExtra = Math.signum(radarOffset) * 25; // mantem radar cobrindo área ampla
+		setTurnRadarRight(radarOffset + ajusteExtra);
         // Se estiver longe, o radar continua varrendo (configurado no loop principal)
 
         // MIRA COM PREDIÇÃO AVANÇADA
