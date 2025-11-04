@@ -444,7 +444,9 @@ public class FirstRobot extends AdvancedRobot {
         setTurnGunRight(gunTurnPreditivo);
 
         // Ajusta força do disparo
-        if (e.getDistance() > 200) {
+        if (e.getEnergy() < 10) {
+            lastFirePower = Math.min(1.0, e.getEnergy() / 3); // Evita desperdiçar energia
+        } else if (e.getDistance() > 200) {
             lastFirePower = 1.5;
         } else if (e.getDistance() > 100) {
             lastFirePower = 2;
