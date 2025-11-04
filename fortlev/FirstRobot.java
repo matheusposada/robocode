@@ -202,10 +202,19 @@ public class FirstRobot extends AdvancedRobot {
 
             execute();
 
-            if (getTime() - ultimoTempoMudancaDirecao > 40 && Math.random() > 0.6) {
-                direcaoMovimento *= -1;
-                ultimoTempoMudancaDirecao = getTime();
-            }
+			// Mudança de direção adaptativa
+			if (getTime() - ultimoTempoMudancaDirecao > 30 + Math.random() * 50) {
+			    double chance = 0.4;
+			    if (getEnergy() < 50) chance = 0.7; // mais evasivo se com pouca vida
+			    if (enemyDistance < 200) chance += 0.2; // mais imprevisível quando próximo
+			
+			    if (Math.random() < chance) {
+			        direcaoMovimento *= -1;
+			        setTurnRight(45 * (Math.random() > 0.5 ? 1 : -1));
+			        setAhead(100 + Math.random() * 50);
+			        ultimoTempoMudancaDirecao = getTime();
+			    }
+			}
         }
     }
 
