@@ -94,6 +94,7 @@ public class FirstRobot extends AdvancedRobot {
             double largura = getBattleFieldWidth();
             double altura = getBattleFieldHeight();
             double margemSeguranca = 80;
+            evitarParedes();
             
             // ===== VERIFICA SE PRECISA TROCAR DE ALVO =====
             if (missedShots >= MAX_MISSED_SHOTS && trackName != null) {
@@ -505,6 +506,26 @@ public class FirstRobot extends AdvancedRobot {
 	public void onHitWall(HitWallEvent e){
 		direcaoMovimento = -direcaoMovimento;//bate e volta
 	}
+
+	// ===== MÉTODO AUXILIAR: EVITAR PAREDES =====
+	private void evitarParedes() {
+    	double margem = 60; // distância mínima das bordas
+    	double x = getX();
+	    double y = getY();
+	    double largura = getBattleFieldWidth();
+	    double altura = getBattleFieldHeight();
+
+    	if (x < margem || x > largura - margem || y < margem || y > altura - margem) {
+        	// Calcula ângulo para o centro do campo
+	        double anguloCentro = Math.toDegrees(Math.atan2(largura / 2 - x, altura / 2 - y));
+    	    double correcao = normalRelativeAngleDegrees(anguloCentro - getHeading());
+
+        	// Corrige rota gradualmente e se afasta da parede
+	        setTurnRight(correcao);
+    	    setAhead(100);
+        	direcaoMovimento = (Math.random() > 0.5) ? 1 : -1;
+	    }
+	}    
 
     // ===== EVENTO: QUANDO VENCE A PARTIDA =====
     public void onWin(WinEvent e) {
