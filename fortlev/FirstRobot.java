@@ -457,26 +457,28 @@ public class FirstRobot extends AdvancedRobot {
     }
 
     // ===== EVENTO: QUANDO ACERTA UM INIMIGO =====
-    public void onHitRobot(HitRobotEvent e) {
-        // Se acertou um inimigo, reseta o contador de erros
-        if (e.getName().equals(trackName)) {
-            missedShots = 0;
-            lastHitTime = getTime();
-            out.println("ACERTOU! Resetando contador de erros.");
-        }
-
-        double bearing = e.getBearing();
-
-        if (Math.abs(bearing) < 30 && getGunHeat() == 0) {
-            setFire(3);
-        }
-
-        if (e.isMyFault()) {
-            setTurnRight(-bearing + (Math.random() > 0.5 ? 45 : -45));
-            setBack(150 + Math.random() * 100);
-            direcaoMovimento *= -1;
-        }
-    }
+	public void onHitRobot(HitRobotEvent e) {
+	    if (e.getName().equals(trackName)) {
+	        missedShots = 0;
+	        lastHitTime = getTime();
+	    }
+	
+	    double bearing = e.getBearing();
+	
+	    // Se está muito perto, recua lateralmente
+	    if (Math.abs(bearing) < 40) {
+	        double ajusteEvasao = (Math.random() > 0.5 ? 1 : -1) * 90;
+	        setTurnRight(normalRelativeAngleDegrees(bearing + ajusteEvasao));
+	        setBack(100 + Math.random() * 50);
+	    }
+	
+	    // Se foi culpa nossa, reverte direção e dá um giro extra
+	    if (e.isMyFault()) {
+	        direcaoMovimento *= -1;
+	        setTurnRight(45 * direcaoMovimento);
+	        setAhead(120);
+	    }
+	}
 
     // ===== EVENTO: QUANDO A BALA ACERTA =====
     public void onBulletHit(BulletHitEvent e) {
